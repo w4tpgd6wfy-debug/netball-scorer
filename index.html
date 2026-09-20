@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Netball Scorer">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.json">
+<title>Netball Scorer</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f2f2f7;
+    color: #111827;
+    min-height: 100vh;
+}
+
+.app {
+    max-width: 520px;
+    margin: auto;
+    min-height: 100vh;
+    background: #f2f2f7;
+}
+
+header {
+    background: #111827;
+    color: white;
+    padding: 18px 16px 14px;
+    padding-top: calc(18px + env(safe-area-inset-top));
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 25px;
+}
+
+header .quarter {
+    margin-top: 5px;
+    font-size: 15px;
+    opacity: 0.8;
+}
+
+.content {
+    padding: 14px;
+}
+
+.card {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.setup label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+input, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 17px;
+    margin-bottom: 14px;
+    background: white;
+}
+
+.scoreboard {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.team {
+    text-align: center;
+    background: #f9fafb;
+    border-radius: 14px;
+    padding: 14px 8px;
+}
+
+.team-name {
+    font-size: 18px;
+    font-weight: 700;
+    min-height: 25px;
+}
+
+.score {
+    font-size: 64px;
+    line-height: 1;
+    font-weight: 700;
+    margin: 15px 0;
+}
+
+.goal-button {
+    width: 100%;
+    border: 0;
+    border-radius: 12px;
+    padding: 16px 10px;
+    background: #111827;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.goal-button:active {
+    transform: scale(0.97);
+}
+
+.timer {
+    text-align: center;
+    font-size: 52px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    margin: 5px 0 12px;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+button {
+    border: 0;
+    border-radius: 11px;
+    padding: 13px 10px;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.primary {
+    background: #111827;
+    color: white;
+}
+
+.secondary {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.danger {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.full {
+    width: 100%;
+}
+
+.history {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.history li {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+}
+
+.empty {
+    color: #6b7280;
+    text-align: center;
+    padding: 8px;
+}
+
+.hidden {
+    display: none;
+}
+
+@media (max-width: 360px) {
+    .score {
+        font-size: 52px;
+    }
+
+    .team-name {
+        font-size: 16px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<header>
+    <h1>🏐 Netball Scorer</h1>
+    <div class="quarter" id="quarterDisplay">Quarter 1 of 4</div>
+</header>
+
+<div class="content">
+
+<div class="card setup" id="setupCard">
+    <label>Home Team</label>
+    <input id="homeName" value="Home">
+
+    <label>Away Team</label>
+    <input id="awayName" value="Away">
+
+    <label>Quarter Length</label>
+    <select id="quarterLength">
+        <option value="10">10 minutes</option>
+        <option value="12">12 minutes</option>
+        <option value="15" selected>15 minutes</option>
+        <option value="20">20 minutes</option>
+    </select>
+
+    <button class="primary full" onclick="startNewGame()">Start Game</button>
+</div>
+
+<div id="gameArea" class="hidden">
+
+    <div class="card">
+
+        <div class="timer" id="timer">15:00</div>
+
+        <div class="controls">
+            <button class="primary" onclick="toggleTimer()" id="timerButton">
+                Start
+            </button>
+
+            <button class="secondary" onclick="nextQuarter()">
+                Next Quarter
+            </button>
+        </div>
+
+    </div>
+
+    <div class="card scoreboard">
+
+        <div class="team">
+            <div class="team-name" id="homeTeam">Home</div>
+            <div class="score" id="homeScore">0</div>
+            <button class="goal-button" onclick="addGoal('home')">
+                +1 Goal
+            </button>
+        </div>
+
+        <div class="team">
+            <div class="team-name" id="awayTeam">Away</div>
+            <div class="score" id="awayScore">0</div>
+            <button class="goal-button" onclick="addGoal('away')">
+                +1 Goal
+            </button>
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="controls">
+            <button class="secondary" onclick="undoGoal()">
+                Undo Last Goal
+            </button>
+
+            <button class="danger" onclick="endGame()">
+                End Game
+            </button>
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h3>Goal History</h3>
+
+        <ul class="history" id="history">
+            <li class="empty">No goals yet</li>
+        </ul>
+
+    </div>
+
+    <div class="card">
+        <button class="secondary full" onclick="newGame()">
+            New Game
+        </button>
+    </div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+let game = {
+    homeName: "Home",
+    awayName: "Away",
+    homeScore: 0,
+    awayScore: 0,
+    quarter: 1,
+    quarterLength: 15,
+    seconds: 900,
+    running: false,
+    history: []
+};
+
+let timerInterval = null;
+
+function saveGame() {
+    localStorage.setItem("netballScorerGame", JSON.stringify(game));
+}
+
+function loadGame() {
+    const saved = localStorage.getItem("netballScorerGame");
+
+    if (saved) {
+        try {
+            game = JSON.parse(saved);
+            showGame();
+        } catch (e) {
+            localStorage.removeItem("netballScorerGame");
+        }
+    }
+}
+
+function startNewGame() {
+
+    game.homeName = document.getElementById("homeName").value.trim() || "Home";
+    game.awayName = document.getElementById("awayName").value.trim() || "Away";
+    game.quarterLength = Number(document.getElementById("quarterLength").value);
+
+    game.homeScore = 0;
+    game.awayScore = 0;
+    game.quarter = 1;
+    game.seconds = game.quarterLength * 60;
+    game.running = false;
+    game.history = [];
+
+    saveGame();
+    showGame();
+}
+
+function showGame() {
+
+    document.getElementById("setupCard").classList.add("hidden");
+    document.getElementById("gameArea").classList.remove("hidden");
+
+    document.getElementById("homeTeam").textContent = game.homeName;
+    document.getElementById("awayTeam").textContent = game.awayName;
+
+    render();
+}
+
+function render() {
+
+    document.getElementById("homeScore").textContent = game.homeScore;
+    document.getElementById("awayScore").textContent = game.awayScore;
+
+    document.getElementById("quarterDisplay").textContent =
+        "Quarter " + game.quarter + " of 4";
+
+    let minutes = Math.floor(game.seconds / 60);
+    let seconds = game.seconds % 60;
+
+    document.getElementById("timer").textContent =
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(seconds).padStart(2, "0");
+
+    document.getElementById("timerButton").textContent =
+        game.running ? "Pause" : "Start";
+
+    const history = document.getElementById("history");
+
+    if (game.history.length === 0) {
+        history.innerHTML = '<li class="empty">No goals yet</li>';
+    } else {
+
+        history.innerHTML = game.history
+            .slice()
+            .reverse()
+            .map(item =>
+                "<li><span>" +
+                escapeHtml(item.team) +
+                "</span><span>Q" +
+                item.quarter +
+                " &nbsp; " +
+                formatTime(item.time) +
+                "</span></li>"
+            )
+            .join("");
+    }
+
+    saveGame();
+}
+
+function formatTime(seconds) {
+
+    let minutes = Math.floor(seconds / 60);
+    let secs = seconds % 60;
+
+    return String(minutes).padStart(2, "0") +
+        ":" +
+        String(secs).padStart(2, "0");
+}
+
+function escapeHtml(text) {
+
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function addGoal(team) {
+
+    if (team === "home") {
+        game.homeScore++;
+    } else {
+        game.awayScore++;
+    }
+
+    game.history.push({
+        team: team === "home" ? game.homeName : game.awayName,
+        side: team,
+        quarter: game.quarter,
+        time: game.seconds
+    });
+
+    render();
+}
+
+function undoGoal() {
+
+    if (game.history.length === 0) {
+        return;
+    }
+
+    const last = game.history.pop();
+
+    if (last.side === "home") {
+        game.homeScore = Math.max(0, game.homeScore - 1);
+    } else {
+        game.awayScore = Math.max(0, game.awayScore - 1);
+    }
+
+    render();
+}
+
+function toggleTimer() {
+
+    if (game.running) {
+        pauseTimer();
+    } else {
+        startTimer();
+    }
+}
+
+function startTimer() {
+
+    if (game.seconds <= 0) {
+        return;
+    }
+
+    game.running = true;
+
+    clearInterval(timerInterval);
+
+    timerInterval = setInterval(() => {
+
+        if (game.seconds > 0) {
+            game.seconds--;
+            render();
+        }
+
+        if (game.seconds <= 0) {
+            pauseTimer();
+        }
+
+    }, 1000);
+
+    render();
+}
+
+function pauseTimer() {
+
+    game.running = false;
+
+    clearInterval(timerInterval);
+    timerInterval = null;
+
+    render();
+}
+
+function nextQuarter() {
+
+    pauseTimer();
+
+    if (game.quarter >= 4) {
+        alert(
+            game.homeName + " " +
+            game.homeScore +
+            " - " +
+            game.awayScore +
+            " " +
+            game.awayName +
+            "\n\nGame complete!"
+        );
+        return;
+    }
+
+    game.quarter++;
+    game.seconds = game.quarterLength * 60;
+
+    render();
+}
+
+function endGame() {
+
+    pauseTimer();
+
+    alert(
+        "Final Score\n\n" +
+        game.homeName +
+        " " +
+        game.homeScore +
+        " - " +
+        game.awayScore +
+        " " +
+        game.awayName
+    );
+}
+
+function newGame() {
+
+    pauseTimer();
+
+    if (confirm("Start a new game? The current score will be cleared.")) {
+
+        localStorage.removeItem("netballScorerGame");
+
+        document.getElementById("gameArea").classList.add("hidden");
+        document.getElementById("setupCard").classList.remove("hidden");
+
+        game = {
+            homeName: "Home",
+            awayName: "Away",
+            homeScore: 0,
+            awayScore: 0,
+            quarter: 1,
+            quarterLength: 15,
+            seconds: 900,
+            running: false,
+            history: []
+        };
+    }
+}
+
+window.addEventListener("load", loadGame);
+
+</script>
+
+</body>
+</html>
