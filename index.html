@@ -38,6 +38,7 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 .score{font-size:76px;line-height:.95;font-weight:800;margin:10px 0 13px;font-variant-numeric:tabular-nums}
 .goal{width:100%;font-size:23px;padding:19px 8px;background:#111827;color:#fff}
 .goal:active{transform:scale(.97)}
+.scorer-choice{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}.scorer-choice button{padding:12px 6px;font-size:18px}.gs{background:#dbeafe;color:#1e3a8a}.ga{background:#fef3c7;color:#92400e}
 .centre{display:flex;align-items:center;justify-content:center;gap:7px;text-align:center;font-size:16px;font-weight:800;padding:11px;background:#f3f4f6;border-radius:11px}
 .centre span{font-weight:900}
 .pass-home{background:#eef2ff}
@@ -109,11 +110,13 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 <div class="team-name" id="homeTeam">Home</div>
 <div class="score" id="homeScore">0</div>
 <button class="goal" onclick="addGoal('home')">+1 GOAL</button>
+<div class="scorer-choice"><button class="gs" onclick="addGoal('home','GS')">GS</button><button class="ga" onclick="addGoal('home','GA')">GA</button></div>
 </div>
 <div class="team">
 <div class="team-name" id="awayTeam">Away</div>
 <div class="score" id="awayScore">0</div>
 <button class="goal" onclick="addGoal('away')">+1 GOAL</button>
+<div class="scorer-choice"><button class="gs" onclick="addGoal('away','GS')">GS</button><button class="ga" onclick="addGoal('away','GA')">GA</button></div>
 </div>
 </div>
 
@@ -202,9 +205,9 @@ window.startNewGame=function(){
  $("setupCard").classList.add("hidden");$("gameArea").classList.remove("hidden");render();
 };
 var pendingSide=null;
-window.addGoal=function(side){if(game.finished)return;pendingSide=side;$("scorerTitle").textContent=(side==="home"?game.homeName:game.awayName)+" — who scored?";$("scorerModal").classList.remove("hidden");};
+window.addGoal=function(side,scorer){if(game.finished)return;if(!scorer){pendingSide=side;$("scorerTitle").textContent=(side==="home"?game.homeName:game.awayName)+" — who scored?";$("scorerModal").classList.remove("hidden");return;}if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++;}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++;}game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,scorer:scorer,quarter:game.quarter,time:game.seconds});game.centre=side==="home"?"away":"home";if(navigator.vibrate)navigator.vibrate(25);render();};
 window.cancelScorer=function(){pendingSide=null;$("scorerModal").classList.add("hidden");};
-window.confirmScorer=function(scorer){if(!pendingSide||game.finished)return;var side=pendingSide;pendingSide=null;$("scorerModal").classList.add("hidden");if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++;}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++;}game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,scorer:scorer,quarter:game.quarter,time:game.seconds});game.centre=side==="home"?"away":"home";if(navigator.vibrate)navigator.vibrate(25);render();};
+window.confirmScorer=function(scorer){if(!pendingSide||game.finished)return;var side=pendingSide;pendingSide=null;$("scorerModal").classList.add("hidden");window.addGoal(side,scorer);};
 window.undoGoal=function(){if(!game.history.length||game.finished)return;var q=game.history.pop();if(q.side==="home"){game.homeScore--;game.quarterScores[q.quarter-1][0]--;}else{game.awayScore--;game.quarterScores[q.quarter-1][1]--;}game.centre=q.side;render();};
 window.toggleTimer=function(){if(game.finished)return;if(game.running){clearInterval(timer);game.running=false;render();}else{game.running=true;render();timer=setInterval(function(){if(game.seconds>0)game.seconds--;if(game.seconds<=0){clearInterval(timer);game.running=false;alert("Time is up for Quarter "+game.quarter+"!");}render();},1000);}};
 window.addTime=function(n){if(!game.finished){game.seconds=Math.max(0,game.seconds+n);render();}};
