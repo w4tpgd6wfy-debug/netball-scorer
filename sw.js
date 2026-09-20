@@ -1,4 +1,4 @@
-const CACHE_NAME = "netball-scorer-v2";
+const CACHE_NAME = "netball-scorer-v3";
 const FILES_TO_CACHE = ["./","./index.html","./manifest.json"];
 
 self.addEventListener("install", event => {
