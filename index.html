@@ -193,7 +193,7 @@ function render(){
  $("centreDisplay").textContent="Centre pass: "+(game.centre==="home"?game.homeName:game.awayName);
  $("goalCount").textContent=game.history.length+" goals";
  $("ph").textContent=game.homeName;$("pa").textContent=game.awayName;
- var pos=["GS","GA","WA","C","WD","GD","GK"],pr="";for(var p=0;p<pos.length;p++)pr+="<tr><td>"+pos[p]+"</td><td>"+game.positions.home[pos[p]]+"</td><td>"+game.positions.away[pos[p]]+"</td></tr>";pr+="<tr class=\"total\"><td>Total goals</td><td>"+game.homeScore+"</td><td>"+game.awayScore+"</td></tr>";$("positionRows").innerHTML=pr;
+ var pos=["GS","GA"],pr="";for(var p=0;p<pos.length;p++)pr+="<tr><td>"+pos[p]+"</td><td>"+game.positions.home[pos[p]]+"</td><td>"+game.positions.away[pos[p]]+"</td></tr>";pr+="<tr class=\"total\"><td>Total goals</td><td>"+game.homeScore+"</td><td>"+game.awayScore+"</td></tr>";$("positionRows").innerHTML=pr;
  var rows="";for(var i=0;i<4;i++)rows+="<tr"+(i+1===game.quarter&&!game.finished?" class=\"current\"":"")+"><td>Q"+(i+1)+"</td><td>"+game.quarterScores[i][0]+"</td><td>"+game.quarterScores[i][1]+"</td></tr>";
  $("quarterRows").innerHTML=rows;
  var h="";for(var j=Math.max(0,game.history.length-25);j<game.history.length;j++){var q=game.history[j];h="<li><span>"+q.team+" · <b>"+(q.scorer||"?")+"</b></span><span>Q"+q.quarter+" · "+fmt(q.time)+"</span></li>"+h;}
