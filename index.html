@@ -231,7 +231,7 @@ function undoGoal(){
 if(!game.history.length||game.finished)return;
 const x=game.history.pop();
 if(x.side==="home"){game.homeScore=Math.max(0,game.homeScore-1);game.quarterScores[x.quarter-1][0]=Math.max(0,game.quarterScores[x.quarter-1][0]-1)}
-else{game.awayScore=Math.max(0,game.awayScore-1);game.quarterScores[x.quarter-1][1]=Math.max(0,game.quarterScores[x.quarter-1][1])}
+else{game.awayScore=Math.max(0,game.awayScore-1);game.quarterScores[x.quarter-1][1]=Math.max(0,game.quarterScores[x.quarter-1][1]-1)}
 game.centre=x.side;
 vibrate();render();
 }
