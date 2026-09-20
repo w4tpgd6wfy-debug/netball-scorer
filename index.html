@@ -156,141 +156,45 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 </div>
 
 <script>
-let game={
-homeName:"Home",awayName:"Away",homeScore:0,awayScore:0,quarter:1,quarterLength:15,seconds:900,running:false,centre:"home",history:[],quarterScores:[[0,0],[0,0],[0,0],[0,0]],finished:false
-};
-let timerInterval=null;
-
-function saveGame(){localStorage.setItem("netballScorerGame",JSON.stringify(game))}
-function vibrate(){if(navigator.vibrate)navigator.vibrate(20)}
-function formatTime(s){let m=Math.floor(s/60),sec=s%60;return String(m).padStart(2,"0")+":"+String(sec).padStart(2,"0")}
-function escapeHtml(t){const d=document.createElement("div");d.textContent=t;return d.innerHTML}
-
-function startNewGame(){
-pauseTimer(false);
-game.homeName=document.getElementById("homeName").value.trim()||"Home";
-game.awayName=document.getElementById("awayName").value.trim()||"Away";
-game.quarterLength=Number(document.getElementById("quarterLength").value);
-game.homeScore=0;game.awayScore=0;game.quarter=1;game.seconds=game.quarterLength*60;game.running=false;
-game.centre=document.getElementById("firstCentre").value;game.history=[];game.quarterScores=[[0,0],[0,0],[0,0],[0,0]];game.finished=false;
-saveGame();showGame();
-}
-
-function showGame(){
-document.getElementById("setupCard").classList.add("hidden");
-document.getElementById("gameArea").classList.remove("hidden");
-document.getElementById("homeTeam").textContent=game.homeName;
-document.getElementById("awayTeam").textContent=game.awayName;
-render();
-}
-
+(function(){
+"use strict";
+var game={homeName:"Home",awayName:"Away",homeScore:0,awayScore:0,quarter:1,quarterLength:15,seconds:900,centre:"home",history:[],quarterScores:[[0,0],[0,0],[0,0],[0,0]],finished:false,running:false};
+var timer=null;
+function $(id){return document.getElementById(id);}
+function fmt(s){var m=Math.floor(s/60),x=s%60;return (m<10?"0":"")+m+":"+(x<10?"0":"")+x;}
+function save(){try{localStorage.setItem("netballScorerGame",JSON.stringify(game));}catch(e){}}
 function render(){
-document.getElementById("homeScore").textContent=game.homeScore;
-document.getElementById("awayScore").textContent=game.awayScore;
-document.getElementById("quarterDisplay").textContent=game.finished?"GAME COMPLETE":"Quarter "+game.quarter+" of 4";
-document.getElementById("status").textContent=game.finished?"Final":(game.running?"LIVE":"Paused");
-document.getElementById("timer").textContent=formatTime(game.seconds);
-document.getElementById("timer").classList.toggle("warning",game.seconds<=60);
-document.getElementById("timerButton").textContent=game.running?"Pause":"Start";
-document.getElementById("runningScore").textContent=game.homeScore+" – "+game.awayScore;
-document.getElementById("qh").textContent=game.homeName;
-document.getElementById("qa").textContent=game.awayName;
-document.getElementById("centreDisplay").innerHTML="Centre pass: <span>"+escapeHtml(game.centre==="home"?game.homeName:game.awayName)+"</span>";
-document.getElementById("centreDisplay").className="centre "+(game.centre==="home"?"pass-home":"pass-away");
-document.getElementById("goalCount").textContent=game.history.length;
-document.getElementById("quarterButton").textContent=game.quarter>=4?"Finish Game":"Finish Quarter "+game.quarter;
-renderQuarterRows();
-renderHistory();
-saveGame();
+ $("homeScore").textContent=game.homeScore;$("awayScore").textContent=game.awayScore;
+ $("timer").textContent=fmt(game.seconds);$("timerButton").textContent=game.running?"Pause":"Start";
+ $("status").textContent=game.finished?"Final":game.running?"LIVE":"Paused";
+ $("quarterDisplay").textContent=game.finished?"GAME COMPLETE":"Quarter "+game.quarter+" of 4";
+ $("homeTeam").textContent=game.homeName;$("awayTeam").textContent=game.awayName;
+ $("qh").textContent=game.homeName;$("qa").textContent=game.awayName;
+ $("runningScore").textContent=game.homeScore+" – "+game.awayScore;
+ $("centreDisplay").textContent="Centre pass: "+(game.centre==="home"?game.homeName:game.awayName);
+ $("goalCount").textContent=game.history.length;
+ var rows="";for(var i=0;i<4;i++)rows+="<tr"+(i+1===game.quarter&&!game.finished?" class=\"current\"":"")+"><td>Q"+(i+1)+"</td><td>"+game.quarterScores[i][0]+"</td><td>"+game.quarterScores[i][1]+"</td></tr>";
+ $("quarterRows").innerHTML=rows;
+ var h="";for(var j=Math.max(0,game.history.length-25);j<game.history.length;j++){var q=game.history[j];h="<li><span>"+q.team+"</span><span>Q"+q.quarter+" · "+fmt(q.time)+"</span></li>"+h;}
+ $("history").innerHTML=h||'<li class="empty">No goals yet</li>';
+ $("quarterButton").textContent=game.quarter>=4?"Finish Game":"Finish Quarter "+game.quarter;
+ save();
 }
-
-function renderQuarterRows(){
-let html="";
-for(let i=0;i<4;i++){
-let cls=i+1===game.quarter&&!game.finished?" class="current"":"";
-html+="<tr"+cls+"><td>Q"+(i+1)+"</td><td>"+game.quarterScores[i][0]+"</td><td>"+game.quarterScores[i][1]+"</td></tr>";
-}
-document.getElementById("quarterRows").innerHTML=html;
-}
-
-function renderHistory(){
-const el=document.getElementById("history");
-if(!game.history.length){el.innerHTML='<li class="empty">No goals yet</li>';return}
-el.innerHTML=game.history.slice(-25).reverse().map((x,i)=>"<li><span>"+escapeHtml(x.team)+"</span><span>Q"+x.quarter+" · "+formatTime(x.time)+"</span></li>").join("");
-}
-
-function addGoal(side){
-if(game.finished)return;
-if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++}
-game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,quarter:game.quarter,time:game.seconds});
-game.centre=side==="home"?"away":"home";
-vibrate();render();
-}
-
-function undoGoal(){
-if(!game.history.length||game.finished)return;
-const x=game.history.pop();
-if(x.side==="home"){game.homeScore=Math.max(0,game.homeScore-1);game.quarterScores[x.quarter-1][0]=Math.max(0,game.quarterScores[x.quarter-1][0]-1)}
-else{game.awayScore=Math.max(0,game.awayScore-1);game.quarterScores[x.quarter-1][1]=Math.max(0,game.quarterScores[x.quarter-1][1]-1)}
-game.centre=x.side;
-vibrate();render();
-}
-
-function toggleTimer(){game.running?pauseTimer(true):startTimer()}
-function startTimer(){
-if(game.finished||game.seconds<=0)return;
-game.running=true;clearInterval(timerInterval);
-timerInterval=setInterval(()=>{
-if(game.seconds>0)game.seconds--;
-if(game.seconds<=0){pauseTimer(true);timerEnded()}
-render();
-},1000);
-render();
-}
-function pauseTimer(update=true){
-game.running=false;clearInterval(timerInterval);timerInterval=null;if(update)render();
-}
-function timerEnded(){vibrate();setTimeout(()=>alert("Time is up for Quarter "+game.quarter+"!"),50)}
-function addTime(amount){
-if(game.finished)return;
-game.seconds=Math.max(0,game.seconds+amount);
-render();
-}
-
-function setCentre(side){if(game.finished)return;game.centre=side;vibrate();render()}
-
-function nextQuarter(){
-pauseTimer(false);
-if(game.quarter>=4){finishGame();return}
-game.quarter++;game.seconds=game.quarterLength*60;render();
-}
-
-function finishGame(){
-pauseTimer(false);game.finished=true;render();
-setTimeout(()=>alert("Final Score\n\n"+game.homeName+" "+game.homeScore+" – "+game.awayScore+" "+game.awayName),50);
-}
-
-function endGame(){
-pauseTimer(false);
-if(confirm("End the game now?")){game.finished=true;render();setTimeout(()=>alert("Final Score\n\n"+game.homeName+" "+game.homeScore+" – "+game.awayScore+" "+game.awayName),50)}
-else{game.running=false;render()}
-}
-
-function newGame(){
-pauseTimer(false);
-if(confirm("Start a new game? The current score will be cleared.")){
-localStorage.removeItem("netballScorerGame");
-game={homeName:"Home",awayName:"Away",homeScore:0,awayScore:0,quarter:1,quarterLength:15,seconds:900,running:false,centre:"home",history:[],quarterScores:[[0,0],[0,0],[0,0],[0,0]],finished:false};
-document.getElementById("gameArea").classList.add("hidden");document.getElementById("setupCard").classList.remove("hidden");
-}
-}
-
-function loadGame(){
-const saved=localStorage.getItem("netballScorerGame");
-if(saved){try{game=JSON.parse(saved);if(game.running)game.running=false;showGame()}catch(e){localStorage.removeItem("netballScorerGame")}}
-}
-window.addEventListener("load",loadGame);
-if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js"));
+window.startNewGame=function(){
+ clearInterval(timer);game={homeName:$("homeName").value.trim()||"Home",awayName:$("awayName").value.trim()||"Away",quarter:1,quarterLength:Number($("quarterLength").value)||15,seconds:(Number($("quarterLength").value)||15)*60,homeScore:0,awayScore:0,centre:$("firstCentre").value,history:[],quarterScores:[[0,0],[0,0],[0,0],[0,0]],finished:false,running:false};
+ $("setupCard").classList.add("hidden");$("gameArea").classList.remove("hidden");render();
+};
+window.addGoal=function(side){if(game.finished)return;if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++;}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++;}game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,quarter:game.quarter,time:game.seconds});game.centre=side==="home"?"away":"home";render();};
+window.undoGoal=function(){if(!game.history.length||game.finished)return;var q=game.history.pop();if(q.side==="home"){game.homeScore--;game.quarterScores[q.quarter-1][0]--;}else{game.awayScore--;game.quarterScores[q.quarter-1][1]--;}game.centre=q.side;render();};
+window.toggleTimer=function(){if(game.finished)return;if(game.running){clearInterval(timer);game.running=false;render();}else{game.running=true;render();timer=setInterval(function(){if(game.seconds>0)game.seconds--;if(game.seconds<=0){clearInterval(timer);game.running=false;alert("Time is up for Quarter "+game.quarter+"!");}render();},1000);}};
+window.addTime=function(n){if(!game.finished){game.seconds=Math.max(0,game.seconds+n);render();}};
+window.setCentre=function(s){if(!game.finished){game.centre=s;render();}};
+window.nextQuarter=function(){clearInterval(timer);game.running=false;if(game.quarter>=4){game.finished=true;render();alert("Final Score\n\n"+game.homeName+" "+game.homeScore+" – "+game.awayScore+" "+game.awayName);}else{game.quarter++;game.seconds=game.quarterLength*60;render();}};
+window.finishGame=function(){clearInterval(timer);game.running=false;game.finished=true;render();alert("Final Score\n\n"+game.homeName+" "+game.homeScore+" – "+game.awayScore+" "+game.awayName);};
+window.endGame=function(){if(confirm("End the game now?")){game.finished=true;clearInterval(timer);game.running=false;render();}};
+window.newGame=function(){if(confirm("Start a new game? The current score will be cleared.")){localStorage.removeItem("netballScorerGame");location.reload();}};
+window.addEventListener("load",function(){var s=localStorage.getItem("netballScorerGame");if(s){try{game=JSON.parse(s);$("setupCard").classList.add("hidden");$("gameArea").classList.remove("hidden");}catch(e){localStorage.removeItem("netballScorerGame");}}render();});
+})();
 </script>
 </body>
 </html>
