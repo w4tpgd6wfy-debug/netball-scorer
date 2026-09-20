@@ -57,6 +57,8 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 .hidden{display:none}
 .small{font-size:13px;color:#6b7280;margin-top:7px;text-align:center}
 .game-over{font-size:18px;text-align:center;font-weight:800;padding:10px;background:#f3f4f6;border-radius:11px}
+.scorer-summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}.scorer-box{background:#f8fafc;border-radius:12px;text-align:center;padding:9px}.scorer-label{font-size:13px;font-weight:700;color:#6b7280}.scorer-total{font-size:30px;font-weight:800;margin-top:2px}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:20}.modal.hidden{display:none}.modal-card{background:#fff;border-radius:18px;padding:18px;width:100%;max-width:360px;text-align:center}.modal-card h2{margin:0 0 5px;font-size:22px}.modal-card p{margin:0 0 15px;color:#6b7280}.scorer-buttons{display:grid;grid-template-columns:1fr 1fr;gap:10px}.scorer-buttons button{font-size:22px;padding:20px 10px}.cancel{margin-top:10px;width:100%}
 @media(max-width:370px){
 .score{font-size:64px}
 .timer{font-size:50px}
@@ -140,7 +142,12 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 </div>
 
 <div class="card">
-<div class="section-title"><h3>Recent Goals</h3><span id="goalCount">0</span></div>
+<div class="section-title"><h3>Goal Scorers</h3><span id="goalCount">0 goals</span></div>
+<div class="scorer-summary"><div class="scorer-box"><div class="scorer-label">GS</div><div class="scorer-total" id="gsTotal">0</div></div><div class="scorer-box"><div class="scorer-label">GA</div><div class="scorer-total" id="gaTotal">0</div></div></div>
+</div>
+
+<div class="card">
+<div class="section-title"><h3>Recent Goals</h3></div>
 <ul class="history" id="history"><li class="empty">No goals yet</li></ul>
 </div>
 
@@ -151,6 +158,15 @@ button{border:0;border-radius:13px;padding:14px 10px;font-size:17px;font-weight:
 <div class="card">
 <button class="secondary full" onclick="newGame()">New Game</button>
 </div>
+</div>
+</div>
+
+<div class="modal hidden" id="scorerModal">
+<div class="modal-card">
+<h2 id="scorerTitle">Who scored?</h2>
+<p>Tap the goal scorer</p>
+<div class="scorer-buttons"><button class="primary" onclick="confirmScorer('GS')">GS</button><button class="primary" onclick="confirmScorer('GA')">GA</button></div>
+<button class="secondary cancel" onclick="cancelScorer()">Cancel</button>
 </div>
 </div>
 </div>
@@ -172,10 +188,11 @@ function render(){
  $("qh").textContent=game.homeName;$("qa").textContent=game.awayName;
  $("runningScore").textContent=game.homeScore+" – "+game.awayScore;
  $("centreDisplay").textContent="Centre pass: "+(game.centre==="home"?game.homeName:game.awayName);
- $("goalCount").textContent=game.history.length;
+ $("goalCount").textContent=game.history.length+" goals";
+ var gs=0,ga=0;for(var g=0;g<game.history.length;g++){if(game.history[g].scorer==="GS")gs++;if(game.history[g].scorer==="GA")ga++;}$("gsTotal").textContent=gs;$("gaTotal").textContent=ga;
  var rows="";for(var i=0;i<4;i++)rows+="<tr"+(i+1===game.quarter&&!game.finished?" class=\"current\"":"")+"><td>Q"+(i+1)+"</td><td>"+game.quarterScores[i][0]+"</td><td>"+game.quarterScores[i][1]+"</td></tr>";
  $("quarterRows").innerHTML=rows;
- var h="";for(var j=Math.max(0,game.history.length-25);j<game.history.length;j++){var q=game.history[j];h="<li><span>"+q.team+"</span><span>Q"+q.quarter+" · "+fmt(q.time)+"</span></li>"+h;}
+ var h="";for(var j=Math.max(0,game.history.length-25);j<game.history.length;j++){var q=game.history[j];h="<li><span>"+q.team+" · <b>"+(q.scorer||"?")+"</b></span><span>Q"+q.quarter+" · "+fmt(q.time)+"</span></li>"+h;}
  $("history").innerHTML=h||'<li class="empty">No goals yet</li>';
  $("quarterButton").textContent=game.quarter>=4?"Finish Game":"Finish Quarter "+game.quarter;
  save();
@@ -184,7 +201,10 @@ window.startNewGame=function(){
  clearInterval(timer);game={homeName:$("homeName").value.trim()||"Home",awayName:$("awayName").value.trim()||"Away",quarter:1,quarterLength:Number($("quarterLength").value)||15,seconds:(Number($("quarterLength").value)||15)*60,homeScore:0,awayScore:0,centre:$("firstCentre").value,history:[],quarterScores:[[0,0],[0,0],[0,0],[0,0]],finished:false,running:false};
  $("setupCard").classList.add("hidden");$("gameArea").classList.remove("hidden");render();
 };
-window.addGoal=function(side){if(game.finished)return;if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++;}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++;}game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,quarter:game.quarter,time:game.seconds});game.centre=side==="home"?"away":"home";render();};
+var pendingSide=null;
+window.addGoal=function(side){if(game.finished)return;pendingSide=side;$("scorerTitle").textContent=(side==="home"?game.homeName:game.awayName)+" — who scored?";$("scorerModal").classList.remove("hidden");};
+window.cancelScorer=function(){pendingSide=null;$("scorerModal").classList.add("hidden");};
+window.confirmScorer=function(scorer){if(!pendingSide||game.finished)return;var side=pendingSide;pendingSide=null;$("scorerModal").classList.add("hidden");if(side==="home"){game.homeScore++;game.quarterScores[game.quarter-1][0]++;}else{game.awayScore++;game.quarterScores[game.quarter-1][1]++;}game.history.push({team:side==="home"?game.homeName:game.awayName,side:side,scorer:scorer,quarter:game.quarter,time:game.seconds});game.centre=side==="home"?"away":"home";if(navigator.vibrate)navigator.vibrate(25);render();};
 window.undoGoal=function(){if(!game.history.length||game.finished)return;var q=game.history.pop();if(q.side==="home"){game.homeScore--;game.quarterScores[q.quarter-1][0]--;}else{game.awayScore--;game.quarterScores[q.quarter-1][1]--;}game.centre=q.side;render();};
 window.toggleTimer=function(){if(game.finished)return;if(game.running){clearInterval(timer);game.running=false;render();}else{game.running=true;render();timer=setInterval(function(){if(game.seconds>0)game.seconds--;if(game.seconds<=0){clearInterval(timer);game.running=false;alert("Time is up for Quarter "+game.quarter+"!");}render();},1000);}};
 window.addTime=function(n){if(!game.finished){game.seconds=Math.max(0,game.seconds+n);render();}};
